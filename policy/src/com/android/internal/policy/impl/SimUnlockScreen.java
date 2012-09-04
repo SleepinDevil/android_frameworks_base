@@ -279,7 +279,7 @@ public class SimUnlockScreen extends LinearLayout implements KeyguardScreen, Vie
         }.start();
     }
 
-
+    @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             mCallback.goToLockScreen();
@@ -304,17 +304,21 @@ public class SimUnlockScreen extends LinearLayout implements KeyguardScreen, Vie
             return true;
         }
 
-        if (keyCode == KeyEvent.KEYCODE_HOME) {
+        if (keyCode == KeyEvent.KEYCODE_MENU
+                || keyCode == KeyEvent.KEYCODE_HOME
+                || keyCode == KeyEvent.KEYCODE_SEARCH) {
             event.startTracking();
             return true;
         }
+
         return false;
     }
 
     @Override
     public boolean onKeyLongPress(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_HOME) {
-            LockScreen.handleHomeLongPress(getContext());
+        if (LockScreen.handleKeyLongPress(getContext(), keyCode)) {
+            mCallback.pokeWakelock();
+            return true;
         }
         return false;
     }
