@@ -93,6 +93,9 @@ public class CmSignalText extends TextView {
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
+    ContentResolver resolver = mContext.getContentResolver();
+    setTextColor(Settings.System.getInt(resolver,
+        Settings.System.STATUS_BAR_CLOCKCOLOR, 1)); 
 
         if (!mAttached) {
             mAttached = true;
@@ -133,6 +136,9 @@ public class CmSignalText extends TextView {
             resolver.registerContentObserver(
                     Settings.System.getUriFor(Settings.System.STATUS_BAR_CM_SIGNAL_TEXT), false,
                     this);
+            resolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.STATUS_BAR_CLOCKCOLOR), false,
+                    this);
         }
 
         @Override
@@ -159,9 +165,15 @@ public class CmSignalText extends TextView {
         if (mPhoneState == StatusBarPolicy.PHONE_SIGNAL_IS_AIRPLANE_MODE) {
             setVisibility(View.GONE);
         } else if (style == STYLE_SHOW) {
+            ContentResolver resolver = mContext.getContentResolver();
+            setTextColor(Settings.System.getInt(resolver,
+                    Settings.System.STATUS_BAR_CLOCKCOLOR, 1));
             setVisibility(View.VISIBLE);
             setText(getSignalLevelString(dBm) + " ");
         } else if (style == STYLE_SHOW_DBM) {
+            ContentResolver resolver = mContext.getContentResolver();
+            setTextColor(Settings.System.getInt(resolver,
+                    Settings.System.STATUS_BAR_CLOCKCOLOR, 1));
             String result = getSignalLevelString(dBm) + " dBm";
             SpannableStringBuilder formatted = new SpannableStringBuilder(result);
             int start = result.indexOf("d");

@@ -1932,6 +1932,18 @@ public final class Settings {
         public static final String USE_CUSTOM_LONG_SEARCH_APP_ACTIVITY = "use_custom_long_search_app_activity";
 
         /**
+         * Specifies whether or not to use a custom app on double tap home key press
+         * @hide
+         */
+        public static final String USE_CUSTOME_DOUBLE_TAP_KEY_TOGGLE = "use_custom_double_tap_home_app_toggle";
+
+        /**
+         * Contains activity to start on  double tap home key press
+         * @hide
+         */
+        public static final String USE_CUSTOME_DOUBLE_TAP_ACTIVITY = "use_custom_double_tap_home_app_activity";
+
+        /**
          * Stores the uri of the defined application for user key 1
          * @hide
          */
@@ -2324,12 +2336,18 @@ public final class Settings {
         /**
          * Display style of the status bar battery information
          * 0: Display the stock battery information
-         * 1: Display cm battery percentage implementation / dont show stock icon
+         * 1: Display cm battery percentage
          * 2: Hide the battery information
+         * 3: Display status bar battery
          * default: 0
          * @hide
          */
         public static final String STATUS_BAR_BATTERY = "status_bar_battery";
+
+        /**
+         * Color for the status bar battery style
+         */
+        public static final String STATUS_BAR_BATTERY_COLOR = "status_bar_battery_color";
 
         /**
          * Whether to show the clock in status bar
@@ -2352,11 +2370,124 @@ public final class Settings {
         public static final String STATUS_BAR_ALARM = "status_bar_alarm";
 
         /**
+         * Whether to show the WiFi signal icon in status bar
+         * 0: don't show Wifi signal icon
+         * 1: show the Wifi signal icon
+         * default:1
+         */
+        public static final String STATUS_BAR_WIFI = "status_bar_wifi";
+
+       /**
+        * Whether to show the WiFi-Hotspot icon in the status bar
+        * 0: don't show the WiFi-Hotspot icon
+        * 1: show the Wifi-Hotspot icon
+        * default:1
+        */
+       public static final String STATUS_BAR_WIFI_HOTSPOT = "status_bar_wifi_hotspot";
+
+       /**
+        * Whether to show the bluetooth signal icon in the status bar
+        * 0: don't show the bluetooth signal icon
+        * 1: show the bluetooth signal icon
+        * default:1
+        */
+       public static final String STATUS_BAR_BLUETOOTH = "status_bar_bluetooth";
+
+       /**
+        * Whether to show the 3G signal icon in the status bar
+        * 0: don't show the 3G signal icon
+        * 1: show the 3G signal icon
+        * default:1
+        */
+       public static final String STATUS_BAR_3G = "status_bar_3g";
+
+        /**
+         * Whether to show the GPS icon in status bar
+         * 0: don't show the GPS icon
+         * 1: show the GPS icon
+         * default:1
+         */
+        public static final String STATUS_BAR_GPS = "status_bar_gps";
+
+        /**
+         * Whether to show the Sync icon in the status bar
+         * 0: don't show the Sync icon
+         * 1: show the Sync icon
+         * default:1
+         */
+        public static final String STATUS_BAR_SYNC = "status_bar_sync";
+
+        /**
+	 * Whether to Center the clock in status bar
+         * 0: don't center the clock
+         * 1: center the clock
+         * default: 1
+         * @hide
+         */
+        public static final String STATUS_BAR_CENTERCLOCK = "status_bar_centerclock";
+
+        /**
+         * Whether to hide the centered clock in status bar if expanded
+         * 0: don't hide the centered clock
+         * 1: hide the centered clock
+         * default: 1
+         * @hide
+         */
+        public static final String STATUS_BAR_HIDECENTERCLOCK = "status_bar_hidecenterclock";
+
+        /**
+         * The color to render the status bar clock
+         * hex value including alpha
+         * default: ffffff00
+         * @hide
+         */
+        public static final String STATUS_BAR_CLOCKCOLOR = "status_bar_clockcolor";
+
+        /**
+	 * The color to render the status bar background
+         * hex value including alpha
+         * default: ff000000
+         * @hide
+         */
+        public static final String STATUS_BAR_COLOR = "status_bar_color";
+
+        /**
+         * Transparent notification bar
+         * 0 (theme)      : theme settings
+         * 1 (default)     : normal status bar background image
+         * 2 (custom)      : user defined custom color
+         * 3 (transparent) : fully transparent background image
+         * @hide
+         */
+        public static final String TRANSPARENT_STATUS_BAR = "transparent_status_bar";
+
+        /**
+	 * The color to render the notification dropdown background
+         * hex value including alpha
+         * default: ff000000
+         * @hide
+         */
+        public static final String NOTIFICATION_BACKGROUND_COLOR = "notification_background_color";
+
+        /**
+         * Transparent notification dropdown background
+         * 0 (theme)      : theme settings
+         * 1 (ROM)     : normal notification dropdown background image
+         * 2 (custom)      : user defined custom color
+         * 3 (transparent) : fully transparent background image
+         * 4 (special) : peeping android background image
+         * 5 (custom) : user provided image
+	 * @hide
+         */
+        public static final String TRANSPARENT_NOTIFICATION_BACKGROUND = "transparent_notification_background";
+
+        /**
          * Whether to show the signal text or signal bars.
          * default: 0
          * 0: show signal bars
          * 1: show signal text numbers
          * 2: show signal text numbers w/small dBm appended
+         * 3: hide signal display
          * @hide
          */
         public static final String STATUS_BAR_CM_SIGNAL_TEXT = "status_bar_cm_signal";
@@ -2765,12 +2896,6 @@ public final class Settings {
         public static final String LOCKSCREEN_ALWAYS_BATTERY = "lockscreen_always_battery";
 
         /**
-         * Whether to toggle the flashlight when HOME button is long pressed while at the lockscreen
-         * @hide
-         */
-        public static final String LOCKSCREEN_LONG_HOME_ACTION = "lockscreen_flashlight";
-
-        /**
          * Whether to show the next calendar event
          * @hide
          */
@@ -2993,6 +3118,12 @@ public final class Settings {
          * @hide
          */
         public static final String OVERSCROLL_COLOR = "overscroll_color";
+
+        /**
+         * Sets the bootanimation pathname for use with CMBootanimation
+         * @hide
+         */
+        public static final String BOOTANIMATION_PATH = "bootanimation_path";
 
         /**
          * Whether or not volume button music controls should be enabled to seek media tracks

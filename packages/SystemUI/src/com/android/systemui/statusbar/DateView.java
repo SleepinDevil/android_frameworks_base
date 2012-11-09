@@ -18,11 +18,15 @@ package com.android.systemui.statusbar;
 
 
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
+import android.database.ContentObserver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.text.format.DateFormat;
+import android.os.Handler;
+import android.provider.Settings;
 
 import android.util.AttributeSet;
 import android.util.Slog;
@@ -36,6 +40,30 @@ public final class DateView extends TextView {
 
     private boolean mUpdating = false;
 
+    Handler mHandler;
+
+    class SettingsObserver extends ContentObserver {
+        SettingsObserver(Handler handler) {
+            super(handler);
+        }
+
+        void observe() {
+            ContentResolver resolver = mContext.getContentResolver();
+            resolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.STATUS_BAR_CLOCKCOLOR), false,
+                    this);
+        }
+
+        @Override
+        public void onChange(boolean selfChange) {
+            updateSettings();
+        }
+    }
+
+    private void updateSettings() {
+        updateClock();
+    }
+
     private BroadcastReceiver mIntentReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -47,13 +75,31 @@ public final class DateView extends TextView {
         }
     };
 
+    public DateView(Context context) {
+        this(context, null);
+    }
+
     public DateView(Context context, AttributeSet attrs) {
         super(context, attrs);
+    }
+
+    public DateView(Context context, AttributeSet attrs, int defStyle) {
+        super(context, attrs, defStyle);
+
+        mHandler = new Handler();
+        SettingsObserver settingsObserver = new SettingsObserver(mHandler);
+        settingsObserver.observe();
+
+        updateSettings();
     }
 
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
+        ContentResolver resolver = mContext.getContentResolver();
+        setTextColor(Settings.System.getInt(resolver,
+                Settings.System.STATUS_BAR_CLOCKCOLOR, 1));
+        updateClock();
     }
     
     @Override
@@ -72,7 +118,10 @@ public final class DateView extends TextView {
         Date now = new Date();
         Resources res = Resources.getSystem();
         setText(DateFormat.format(res.getString(com.android.internal.R.string.abbrev_wday_month_day_year),now));
-        
+
+        ContentResolver resolver = mContext.getContentResolver();
+        setTextColor(Settings.System.getInt(resolver,
+                Settings.System.STATUS_BAR_CLOCKCOLOR, 1));
     }
 
     void setUpdates(boolean update) {

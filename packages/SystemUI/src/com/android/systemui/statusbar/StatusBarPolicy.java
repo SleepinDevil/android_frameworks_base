@@ -85,16 +85,15 @@ public class StatusBarPolicy {
 
     private static int AM_PM_STYLE = AM_PM_STYLE_GONE;
 
-    private static final int BATTERY_STYLE_NORMAL    = 0;
-    private static final int BATTERY_STYLE_PERCENT   = 1;
-    private static final int BATTERY_STYLE_GONE      = 2;
-
     private static final int INET_CONDITION_THRESHOLD = 50;
 
     private final Context mContext;
     private final StatusBarManager mService;
     private final Handler mHandler = new StatusBarHandler();
     private final IBatteryStats mBatteryStats;
+
+    private int mStatusBarColor;
+    private int mNotificationBackgroundColor;
 
     // headset
     private boolean mHeadsetPlugged = false;
@@ -545,6 +544,7 @@ public class StatusBarPolicy {
     // sync state
     // If sync is active the SyncActive icon is displayed. If sync is not active but
     // sync is failing the SyncFailing icon is displayed. Otherwise neither are displayed.
+    private boolean SyncIsActive = false;
 
     private BroadcastReceiver mIntentReceiver = new BroadcastReceiver() {
         @Override
@@ -612,13 +612,27 @@ public class StatusBarPolicy {
         }
     };
 
-    private int mStatusBarBattery;
-    // need another var that superceding mPhoneSignalHidden
+    private boolean mStatusBarBattery;
+
+    private boolean mShowPhoneSignal;
+
     private boolean mShowCmSignal;
 
     private boolean mShowHeadset;
 
     private boolean mShowAlarmIcon;
+
+    private boolean mShowWifiIcon;
+
+    private boolean mShowBluetoothIcon;
+
+    private boolean mShow3gIcon;
+
+    private boolean mShowGPSIcon;
+	
+    private boolean GPSenabled;
+
+    private boolean mShowSyncIcon;
 
     class SettingsObserver extends ContentObserver {
         SettingsObserver(Handler handler) {
@@ -638,6 +652,27 @@ public class StatusBarPolicy {
 
             resolver.registerContentObserver(Settings.System
                     .getUriFor(Settings.System.STATUS_BAR_ALARM), false, this);
+
+            resolver.registerContentObserver(Settings.System
+                    .getUriFor(Settings.System.STATUS_BAR_WIFI), false, this);
+
+            resolver.registerContentObserver(Settings.System
+                    .getUriFor(Settings.System.STATUS_BAR_BLUETOOTH), false, this);
+
+            resolver.registerContentObserver(Settings.System
+                    .getUriFor(Settings.System.STATUS_BAR_3G), false, this);
+
+            resolver.registerContentObserver(Settings.System
+                    .getUriFor(Settings.System.STATUS_BAR_GPS), false, this);
+
+            resolver.registerContentObserver(Settings.System
+                    .getUriFor(Settings.System.STATUS_BAR_SYNC), false, this);
+
+            resolver.registerContentObserver(Settings.System
+                    .getUriFor(Settings.System.STATUS_BAR_COLOR), false, this);
+
+            resolver.registerContentObserver(Settings.System
+                    .getUriFor(Settings.System.NOTIFICATION_BACKGROUND_COLOR), false, this);
         }
 
         @Override public void onChange(boolean selfChange) {
@@ -683,7 +718,7 @@ public class StatusBarPolicy {
         }
 
         // hide phone_signal icon if hidden
-        mService.setIconVisibility("phone_signal", !mPhoneSignalHidden && !mShowCmSignal);
+        mService.setIconVisibility("phone_signal", !mPhoneSignalHidden && !mShowCmSignal && mShowPhoneSignal);
 
         // register for phone state notifications.
         ((TelephonyManager)mContext.getSystemService(Context.TELEPHONY_SERVICE))
@@ -731,7 +766,7 @@ public class StatusBarPolicy {
         mBluetoothA2dpConnected = false;
         mBluetoothHeadsetState = BluetoothHeadset.STATE_DISCONNECTED;
         mBluetoothPbapState = BluetoothPbap.STATE_DISCONNECTED;
-        mService.setIconVisibility("bluetooth", mBluetoothEnabled);
+        mService.setIconVisibility("bluetooth", (mBluetoothEnabled && mShowBluetoothIcon));
 
         // Gps status
         mService.setIcon("gps", R.drawable.stat_sys_gps_acquiring_anim, 0);
@@ -809,9 +844,11 @@ public class StatusBarPolicy {
     }
 
     private final void updateSyncState(Intent intent) {
-        boolean isActive = intent.getBooleanExtra("active", false);
+        SyncIsActive = intent.getBooleanExtra("active", false);
         boolean isFailing = intent.getBooleanExtra("failing", false);
-        mService.setIconVisibility("sync_active", isActive);
+        mShowSyncIcon = (Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.STATUS_BAR_SYNC, 1) == 1);
+        mService.setIconVisibility("sync_active", SyncIsActive && mShowSyncIcon);
         // Don't display sync failing icon: BUG 1297963 Set sync error timeout to "never"
         //mService.setIconVisibility("sync_failing", isFailing && !isActive);
     }
@@ -820,13 +857,7 @@ public class StatusBarPolicy {
         final int id = intent.getIntExtra("icon-small", 0);
         int level = intent.getIntExtra("level", 0);
         mService.setIcon("battery", id, level);
-        if(mStatusBarBattery == BATTERY_STYLE_NORMAL) {
-                mService.setIconVisibility("battery", true);
-        } else if (mStatusBarBattery == BATTERY_STYLE_PERCENT) {
-                mService.setIconVisibility("battery", false);
-        } else if (mStatusBarBattery == BATTERY_STYLE_GONE) {
-                mService.setIconVisibility("battery", false);
-        }
+        mService.setIconVisibility("battery", mStatusBarBattery);
 
         boolean plugged = intent.getIntExtra("plugged", 0) != 0;
         level = intent.getIntExtra("level", -1);
@@ -1020,15 +1051,21 @@ public class StatusBarPolicy {
             mInetCondition = inetCondition;
             if (info.isConnected()) {
                 mIsWifiConnected = true;
-                int iconId;
-                if (mLastWifiSignalLevel == -1) {
-                    iconId = sWifiSignalImages[mInetCondition][0];
-                } else {
-                    iconId = sWifiSignalImages[mInetCondition][mLastWifiSignalLevel];
+                int iconId = sWifiSignalImages[mInetCondition][0];
+                if (mShowWifiIcon) {
+                  if (mLastWifiSignalLevel == -1) {
+                      iconId = sWifiSignalImages[mInetCondition][0];
+                  } else {
+                      iconId = sWifiSignalImages[mInetCondition][mLastWifiSignalLevel];
+                  }
                 }
                 mService.setIcon("wifi", iconId, 0);
-                // Show the icon since wi-fi is connected
-                mService.setIconVisibility("wifi", true);
+                if (mShowWifiIcon) {
+                    // Show the icon since wi-fi is connected
+                    mService.setIconVisibility("wifi", true);
+                } else {
+                    mService.setIconVisibility("wifi", false);
+                }
             } else {
                 mLastWifiSignalLevel = -1;
                 mIsWifiConnected = false;
@@ -1152,13 +1189,13 @@ public class StatusBarPolicy {
                 updateSignalStrengthDbm(PHONE_SIGNAL_IS_AIRPLANE_MODE);
                 // show the icon depening on mPhoneSignalHidden (and regardless of
                 // the value of CmShowCmSignal)
-                isVisible = !mPhoneSignalHidden;
+                isVisible = (!mPhoneSignalHidden && mShowPhoneSignal);
             } else {
                 mPhoneSignalIconId = R.drawable.stat_sys_signal_null;
                 updateSignalStrengthDbm(PHONE_SIGNAL_IS_NULL);
                 // set phone_signal visibility false if hidden
                 // and hide it if CmSignalText is used
-                isVisible = !mPhoneSignalHidden && !mShowCmSignal;
+                isVisible = !mPhoneSignalHidden && !mShowCmSignal && mShowPhoneSignal;
             }
             mService.setIcon("phone_signal", mPhoneSignalIconId, 0);
             mService.setIconVisibility("phone_signal", isVisible);
@@ -1336,6 +1373,8 @@ public class StatusBarPolicy {
     private final void updateDataIcon() {
         int iconId;
         boolean visible = true;
+        mShow3gIcon = (Settings.System.getInt(mContext.getContentResolver(),
+                       Settings.System.STATUS_BAR_3G, 1) == 1);
 
         if (!isCdma()) {
             // GSM case, we have to check also the sim state
@@ -1395,10 +1434,12 @@ public class StatusBarPolicy {
             Binder.restoreCallingIdentity(ident);
         }
 
-        if (mDataIconVisible != visible) {
+        if (mShow3gIcon) {
             mService.setIconVisibility("data_connection", visible);
-            mDataIconVisible = visible;
+        } else {
+            mService.setIconVisibility("data_connetion", false);
         }
+        mDataIconVisible = visible;
     }
 
     private final void updateVolume() {
@@ -1465,11 +1506,17 @@ public class StatusBarPolicy {
         }
 
         mService.setIcon("bluetooth", iconId, 0);
-        mService.setIconVisibility("bluetooth", mBluetoothEnabled);
+        if (mShowBluetoothIcon) {
+            mService.setIconVisibility("bluetooth", mBluetoothEnabled);
+        } else {
+            mService.setIconVisibility("bluetooth", false);
+        }
     }
 
     private final void updateWifi(Intent intent) {
         final String action = intent.getAction();
+        mShowWifiIcon = (Settings.System.getInt(mContext.getContentResolver(),
+                         Settings.System.STATUS_BAR_WIFI, 1) == 1);
         if (action.equals(WifiManager.WIFI_STATE_CHANGED_ACTION)) {
 
             final boolean enabled = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE,
@@ -1500,6 +1547,9 @@ public class StatusBarPolicy {
                 }
                 mService.setIcon("wifi", iconId, 0);
             }
+        }
+        if (!mShowWifiIcon) {
+            mService.setIconVisibility("wifi", false);
         }
     }
 
@@ -1572,13 +1622,15 @@ public class StatusBarPolicy {
 
     private final void updateGps(Intent intent) {
         final String action = intent.getAction();
-        final boolean enabled = intent.getBooleanExtra(LocationManager.EXTRA_GPS_ENABLED, false);
+        GPSenabled = intent.getBooleanExtra(LocationManager.EXTRA_GPS_ENABLED, false);
+        mShowGPSIcon = (Settings.System.getInt(mContext.getContentResolver(),
+                        Settings.System.STATUS_BAR_GPS, 1) == 1);
 
-        if (action.equals(LocationManager.GPS_FIX_CHANGE_ACTION) && enabled) {
+        if (action.equals(LocationManager.GPS_FIX_CHANGE_ACTION) && GPSenabled && mShowGPSIcon) {
             // GPS is getting fixes
             mService.setIcon("gps", com.android.internal.R.drawable.stat_sys_gps_on, 0);
             mService.setIconVisibility("gps", true);
-        } else if (action.equals(LocationManager.GPS_ENABLED_CHANGE_ACTION) && !enabled) {
+        } else if ((action.equals(LocationManager.GPS_ENABLED_CHANGE_ACTION) && !GPSenabled) || !mShowGPSIcon) {
             // GPS is off
             mService.setIconVisibility("gps", false);
         } else {
@@ -1671,15 +1723,21 @@ public class StatusBarPolicy {
     private void updateSettings() {
         ContentResolver resolver = mContext.getContentResolver();
 
-        int statusBarBattery = Settings.System.getInt(resolver,
-                Settings.System.STATUS_BAR_BATTERY, 0);
-        mStatusBarBattery = Integer.valueOf(statusBarBattery);
+        // check for changes to status bar color and update accordingly
+        int mSBColor = mStatusBarColor;
 
-        if (mStatusBarBattery == BATTERY_STYLE_NORMAL) {
-                mService.setIconVisibility("battery", true);
-        } else if (mStatusBarBattery == BATTERY_STYLE_PERCENT || mStatusBarBattery == BATTERY_STYLE_GONE) {
-                mService.setIconVisibility("battery", false);
-        }
+        mStatusBarColor = (Settings.System.getInt(resolver,
+                Settings.System.STATUS_BAR_COLOR, 1));
+
+	// check for changes to notification background color and update accordingly
+        int mNBColor = mNotificationBackgroundColor;
+
+        mNotificationBackgroundColor = (Settings.System.getInt(resolver,
+                Settings.System.NOTIFICATION_BACKGROUND_COLOR, 1));
+
+        mStatusBarBattery = (Settings.System.getInt(resolver,
+                Settings.System.STATUS_BAR_BATTERY, 0) == 0);
+        mService.setIconVisibility("battery", mStatusBarBattery);
 
         mShowHeadset = (Settings.System.getInt(resolver,
                 Settings.System.STATUS_BAR_HEADSET, 1) == 1);
@@ -1687,11 +1745,34 @@ public class StatusBarPolicy {
 
         mShowAlarmIcon = (Settings.System.getInt(resolver,
                 Settings.System.STATUS_BAR_ALARM, 1) == 1);
-        mService.setIconVisibility("alarm_clock", mAlarmSet && mShowAlarmIcon);
+	mService.setIconVisibility("alarm_clock", mAlarmSet && mShowAlarmIcon);
+
+        mShowWifiIcon = (Settings.System.getInt(resolver,
+                Settings.System.STATUS_BAR_WIFI, 1) == 1);
+        mService.setIconVisibility("wifi", mShowWifiIcon && mIsWifiConnected);
+
+        mShowBluetoothIcon = (Settings.System.getInt(resolver,
+                Settings.System.STATUS_BAR_BLUETOOTH, 1) == 1);
+        mService.setIconVisibility("bluetooth", mBluetoothEnabled && mShowBluetoothIcon);
+
+        mShow3gIcon = (Settings.System.getInt(resolver,
+                Settings.System.STATUS_BAR_3G, 1) == 1);
+        mService.setIconVisibility("data_connection", mShow3gIcon && mDataIconVisible);
+
+        mShowGPSIcon = (Settings.System.getInt(resolver,
+                Settings.System.STATUS_BAR_GPS, 1) == 1);
+        mService.setIconVisibility("gps", mShowGPSIcon && GPSenabled);
+
+        mShowSyncIcon = (Settings.System.getInt(resolver,
+             Settings.System.STATUS_BAR_SYNC, 1) == 1);
+        mService.setIconVisibility("sync_active", mShowSyncIcon && SyncIsActive);
 
         // 0 will hide the cmsignaltext and show the signal bars
-        mShowCmSignal = Settings.System.getInt(mContext.getContentResolver(),
-                Settings.System.STATUS_BAR_CM_SIGNAL_TEXT, 0) != 0;
-        mService.setIconVisibility("phone_signal", !mPhoneSignalHidden && !mShowCmSignal);
+        mShowPhoneSignal = (Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.STATUS_BAR_CM_SIGNAL_TEXT, 0) != 3);
+        mShowCmSignal = (Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.STATUS_BAR_CM_SIGNAL_TEXT, 0) != 0);
+        mService.setIconVisibility("phone_signal", !mPhoneSignalHidden && !mShowCmSignal && mShowPhoneSignal);
+
     }
 }

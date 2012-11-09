@@ -51,6 +51,9 @@ public class CmBatteryText extends TextView {
             ContentResolver resolver = mContext.getContentResolver();
             resolver.registerContentObserver(
                     Settings.System.getUriFor(Settings.System.STATUS_BAR_BATTERY), false, this);
+            resolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.STATUS_BAR_CLOCKCOLOR), false,
+                    this);
         }
 
         @Override
@@ -69,6 +72,9 @@ public class CmBatteryText extends TextView {
 
     public CmBatteryText(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
+    ContentResolver resolver = mContext.getContentResolver();
+    setTextColor(Settings.System.getInt(resolver,
+        Settings.System.STATUS_BAR_CLOCKCOLOR, 1)); 
 
         mHandler = new Handler();
         SettingsObserver settingsObserver = new SettingsObserver(mHandler);
@@ -139,5 +145,8 @@ public class CmBatteryText extends TextView {
         } else {
             setVisibility(View.GONE);
         }
+
+        setTextColor(Settings.System.getInt(resolver,
+                Settings.System.STATUS_BAR_CLOCKCOLOR, 1));
     }
 }

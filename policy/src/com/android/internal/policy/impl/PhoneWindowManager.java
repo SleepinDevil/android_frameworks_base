@@ -193,6 +193,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     LocalPowerManager mPowerManager;
     Vibrator mVibrator; // Vibrator for giving feedback of orientation changes
 
+    ViewConfiguration mViewConfiguration;
+
     // Vibrator pattern for haptic feedback of a long press.
     long[] mLongPressVibePattern;
 
@@ -294,6 +296,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     boolean mHideLockScreen;
     boolean mDismissKeyguard;
     boolean mHomePressed;
+    long mLastHomeTap = 0;
     Intent mHomeIntent;
     Intent mCarDockIntent;
     Intent mDeskDockIntent;
@@ -572,6 +575,15 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
     };
 
+    /**
+     * Short press also has an expire time to destinguish double tap from single tap.
+     */
+    Runnable mHomeShortPress = new Runnable() {
+        public void run() {
+            launchHomeFromHotKey();
+        }
+    };
+
     Runnable mBackLongPress = new Runnable() {
         public void run() {
             if (Settings.Secure.getInt(mContext.getContentResolver(),
@@ -718,12 +730,31 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
     }
 
+    void launchDoubleTapHomeActivity() {
+        String uri = Settings.System.getString(mContext.getContentResolver(),
+                Settings.System.USE_CUSTOME_DOUBLE_TAP_ACTIVITY);
+
+        if (uri != null) {
+            try {
+                Intent i = Intent.parseUri(uri, 0);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+                mContext.startActivity(i);
+            } catch (URISyntaxException e) {
+
+            } catch (ActivityNotFoundException e) {
+
+            }
+        }
+    }
+
     /** {@inheritDoc} */
     public void init(Context context, IWindowManager windowManager,
             LocalPowerManager powerManager) {
         mContext = context;
         mWindowManager = windowManager;
         mPowerManager = powerManager;
+        mViewConfiguration = ViewConfiguration.get(mContext);
         if(mKeyguardMediator==null)
             mKeyguardMediator = new KeyguardViewMediator(context, this, powerManager);
         mHandler = new Handler();
@@ -1340,7 +1371,26 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                         if (incomingRinging) {
                             Log.i(TAG, "Ignoring HOME; there's a ringing incoming call.");
                         } else {
-                            launchHomeFromHotKey();
+                            boolean doubleTapEnabled = Settings.System.getInt(mContext.getContentResolver(),
+                                            Settings.System.USE_CUSTOME_DOUBLE_TAP_KEY_TOGGLE, 0) != 0;
+
+                            if (!doubleTapEnabled) {
+                                launchHomeFromHotKey();
+                            } else {
+                                long currentTime = SystemClock.uptimeMillis();
+                                long sinceLastTap = currentTime - mLastHomeTap;
+                                mLastHomeTap = currentTime;
+
+                                long usedDoubleTapSlop = (long) (mViewConfiguration.getScaledDoubleTapSlop() * 2 * 1.5f);
+
+                                if (sinceLastTap  <= usedDoubleTapSlop) {
+                                    // launch the double tap activity
+                                    mHandler.removeCallbacks(mHomeShortPress);
+                                    launchDoubleTapHomeActivity();
+                                } else {
+                                    mHandler.postDelayed(mHomeShortPress, usedDoubleTapSlop);
+                                }
+                            }
                         }
                     } else {
                         Log.i(TAG, "Ignoring HOME; event canceled.");
