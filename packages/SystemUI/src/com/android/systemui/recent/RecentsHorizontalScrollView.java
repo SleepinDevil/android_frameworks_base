@@ -90,8 +90,6 @@ public class RecentsHorizontalScrollView extends HorizontalScrollView
         setLayoutTransition(null);
 
         mLinearLayout.removeAllViews();
-        mCallback.clear();
-
         Iterator<View> recycledViews = mRecycledViews.iterator();
         for (int i = 0; i < mAdapter.getCount(); i++) {
             View old = null;
@@ -102,7 +100,6 @@ public class RecentsHorizontalScrollView extends HorizontalScrollView
             }
 
             final View view = mAdapter.getView(i, old, mLinearLayout);
-            mCallback.addContainer(view);
 
             if (mPerformanceHelper != null) {
                 mPerformanceHelper.addViewCallback(view);
@@ -148,7 +145,6 @@ public class RecentsHorizontalScrollView extends HorizontalScrollView
             final View appTitle = view.findViewById(R.id.app_label);
             appTitle.setContentDescription(" ");
             appTitle.setOnTouchListener(noOpListener);
-
             mLinearLayout.addView(view);
         }
         setLayoutTransition(transitioner);
@@ -385,6 +381,5 @@ public class RecentsHorizontalScrollView extends HorizontalScrollView
 
     public void setCallback(RecentsCallback callback) {
         mCallback = callback;
-        mCallback.setScrollView(this);
     }
 }
